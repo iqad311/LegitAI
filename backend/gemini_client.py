@@ -8,9 +8,11 @@ from pydantic import BaseModel
 import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 
-# Load API key safely from Streamlit Secrets
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-GEMINI_MODEL = st.secrets.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+
+if GEMINI_API_KEY is None:
+    raise RuntimeError("❌ GEMINI_API_KEY not found in environment variables!")
 
 # Configure API
 genai.configure(api_key=GEMINI_API_KEY)
@@ -67,5 +69,6 @@ def call_aias_model(prompt: str) -> AiasLLMResponse:
             violation_reason=f"Backend exception: {e}",
             assistant_reply_md="Sorry — backend error occurred.",
         )
+
 
 
