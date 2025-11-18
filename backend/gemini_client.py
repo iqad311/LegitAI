@@ -8,66 +8,47 @@ from backend.config import GEMINI_API_KEY, GEMINI_MODEL
 # Configure API key
 genai.configure(api_key=GEMINI_API_KEY)
 
-
-# Pydantic structured response
+# Pydantic response model
 class AiasLLMResponse(BaseModel):
     requested_level: int
     is_within_selected_level: bool
     violation_reason: Optional[str]
     assistant_reply_md: str
 
-
 def call_aias_model(prompt: str) -> AiasLLMResponse:
     """
-    Streamlit-safe Gemini call.
-    Handles:
-    - schema output
-    - safety fallbacks
-    - Streamlit limitations
+    Calls Gemini and parses JSON manually.
+    Compatible with Streamlit Cloud (which uses older google-generativeai).
     """
 
+    model = genai.GenerativeModel(GEMINI_MODEL)
+
+    response = model.generate_content(
+        prompt,
+        generation_config={
+            "response_mime_type": "application/json"
+        }
+    )
+
+    # Gemini returns text → we must parse JSON manually.
     try:
-        model = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            generation_config={
-                "response_mime_type": "application/json",
-                "temperature": 0.2,
-                "max_output_tokens": 4096,
-            },
-            safety_settings={
-                "HARASSMENT": "BLOCK_NONE",
-                "HATE_SPEECH": "BLOCK_NONE",
-                "SEXUAL": "BLOCK_NONE",
-                "DANGEROUS_CONTENT": "BLOCK_NONE",
-            },
-            response_schema=AiasLLMResponse,
-        )
+        import json
 
-        response = model.generate_content(prompt)
+        raw_text = response.text.strip()
+        data = json.loads(raw_text)
 
-        # Gemini sometimes returns wrong object shape
-        if isinstance(response, AiasLLMResponse):
-            return response
-
-        # If Gemini returns dict-like structure
-        if hasattr(response, "text") and response.text:
-            try:
-                return AiasLLMResponse.model_validate_json(response.text)
-            except Exception:
-                pass
-
-        raise ValueError("Malformed Gemini structured output")
+        return AiasLLMResponse(**data)
 
     except Exception as e:
-        import traceback
-        print("\n\n===== BACKEND CRASH REPORT =====")
-        traceback.print_exc()
-        print("================================\n\n")
-        
-        err = f"⚠️ Backend crashed: {type(e).__name__}"
-        with st.chat_message("assistant"):
-            st.markdown(err)
-    
-        messages.append({"role": "assistant", "content": err})
-        st.stop()
+        print("\n\n===== JSON PARSE ERROR =====")
+        print("Raw model output:\n", response.text)
+        print("Error:", e)
+        print("============================\n\n")
 
+        # Return fallback safe object
+        return AiasLLMResponse(
+            requested_level=1,
+            is_within_selected_level=False,
+            violation_reason="Model returned invalid JSON.",
+            assistant_reply_md="⚠️ Internal parsing error — but I'm still here! Please try again."
+        )
