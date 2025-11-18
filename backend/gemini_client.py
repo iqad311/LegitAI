@@ -19,19 +19,52 @@ class AiasLLMResponse(BaseModel):
 
 def call_aias_model(prompt: str) -> AiasLLMResponse:
     """
-    Calls Gemini using structured JSON output.
-    Works on Streamlit Cloud.
+    Streamlit-safe Gemini call.
+    Handles:
+    - schema output
+    - safety fallbacks
+    - Streamlit limitations
     """
 
-    model = genai.GenerativeModel(
-        model_name=GEMINI_MODEL,
-        generation_config={
-            "response_mime_type": "application/json",
-        },
-        response_schema=AiasLLMResponse,
-    )
+    try:
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            generation_config={
+                "response_mime_type": "application/json",
+                "temperature": 0.2,
+                "max_output_tokens": 4096,
+            },
+            safety_settings={
+                "HARASSMENT": "BLOCK_NONE",
+                "HATE_SPEECH": "BLOCK_NONE",
+                "SEXUAL": "BLOCK_NONE",
+                "DANGEROUS_CONTENT": "BLOCK_NONE",
+            },
+            response_schema=AiasLLMResponse,
+        )
 
-    response = model.generate_content(prompt)
+        response = model.generate_content(prompt)
 
-    # Gemini returns python object automatically
-    return response
+        # Gemini sometimes returns wrong object shape
+        if isinstance(response, AiasLLMResponse):
+            return response
+
+        # If Gemini returns dict-like structure
+        if hasattr(response, "text") and response.text:
+            try:
+                return AiasLLMResponse.model_validate_json(response.text)
+            except Exception:
+                pass
+
+        raise ValueError("Malformed Gemini structured output")
+
+    except Exception as e:
+        print("GEMINI ERROR:", e)
+
+        # Safe fallback object
+        return AiasLLMResponse(
+            requested_level=1,
+            is_within_selected_level=True,
+            violation_reason="Internal backend error.",
+            assistant_reply_md="⚠️ Error contacting backend. Please try again."
+        )
