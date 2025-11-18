@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel
 
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 
 from backend.config import GEMINI_API_KEY, GEMINI_MODEL
 
@@ -62,3 +62,4 @@ def call_aias_model(prompt: str) -> AiasLLMResponse:
             violation_reason=f"Backend exception: {e}",
             assistant_reply_md="Sorry — backend error occurred.",
         )
+
