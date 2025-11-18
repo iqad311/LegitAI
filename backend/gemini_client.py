@@ -1,10 +1,10 @@
 # backend/gemini_client.py
-import os   
+
 from __future__ import annotations
 
 from typing import Optional
 from pydantic import BaseModel
-
+import os
 import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 
@@ -69,6 +69,7 @@ def call_aias_model(prompt: str) -> AiasLLMResponse:
             violation_reason=f"Backend exception: {e}",
             assistant_reply_md="Sorry — backend error occurred.",
         )
+
 
 
 
