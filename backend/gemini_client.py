@@ -27,7 +27,7 @@ class AiasLLMResponse(BaseModel):
 
 
 # Initialize Gemini Client
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.configure(api_key=GEMINI_API_KEY)
 
 
 # Public function: call_aias_model()
@@ -69,6 +69,7 @@ def call_aias_model(prompt: str) -> AiasLLMResponse:
             violation_reason=f"Backend exception: {e}",
             assistant_reply_md="Sorry — backend error occurred.",
         )
+
 
 
 
