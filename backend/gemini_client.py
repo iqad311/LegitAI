@@ -59,12 +59,15 @@ def call_aias_model(prompt: str) -> AiasLLMResponse:
         raise ValueError("Malformed Gemini structured output")
 
     except Exception as e:
-        print("GEMINI ERROR:", e)
+        import traceback
+        print("\n\n===== BACKEND CRASH REPORT =====")
+        traceback.print_exc()
+        print("================================\n\n")
+        
+        err = f"⚠️ Backend crashed: {type(e).__name__}"
+        with st.chat_message("assistant"):
+            st.markdown(err)
+    
+        messages.append({"role": "assistant", "content": err})
+        st.stop()
 
-        # Safe fallback object
-        return AiasLLMResponse(
-            requested_level=1,
-            is_within_selected_level=True,
-            violation_reason="Internal backend error.",
-            assistant_reply_md="⚠️ Error contacting backend. Please try again."
-        )
