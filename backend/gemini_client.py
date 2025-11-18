@@ -8,7 +8,12 @@ from pydantic import BaseModel
 import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 
-from backend.config import GEMINI_API_KEY, GEMINI_MODEL
+# Load API key safely from Streamlit Secrets
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+GEMINI_MODEL = st.secrets.get("GEMINI_MODEL", "gemini-2.0-flash")
+
+# Configure API
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 # Pydantic response schema
@@ -62,4 +67,5 @@ def call_aias_model(prompt: str) -> AiasLLMResponse:
             violation_reason=f"Backend exception: {e}",
             assistant_reply_md="Sorry — backend error occurred.",
         )
+
 
